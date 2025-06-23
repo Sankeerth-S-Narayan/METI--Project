@@ -33,7 +33,7 @@ class Generator(nn.Module):
 @st.cache_resource
 def load_model():
     model = Generator().cpu()
-    model.load_state_dict(torch.load("models/dcgan_generator.pth", map_location="cpu"))
+    model.load_state_dict(torch.load("dcgan_generator.pth", map_location="cpu"))
     model.eval()
     return model
 
