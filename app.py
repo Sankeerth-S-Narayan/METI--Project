@@ -4,39 +4,36 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 import numpy as np
 
-# === Generator Class (must match your training script) ===
+# === Generator Class (Fully Connected, Matches Training Code) ===
 class Generator(nn.Module):
-    def __init__(self, nz=100, nc=1, ngf=64, num_classes=10):
+    def __init__(self, latent_dim=100, num_classes=10):
         super().__init__()
-        self.label_embed = nn.Embedding(num_classes, nz)
+        self.label_embed = nn.Embedding(num_classes, num_classes)
         self.model = nn.Sequential(
-            nn.ConvTranspose2d(nz, ngf * 4, 7, 1, 0),
-            nn.BatchNorm2d(ngf * 4),
-            nn.ReLU(True),
-
-            nn.ConvTranspose2d(ngf * 4, ngf * 2, 4, 2, 1),
-            nn.BatchNorm2d(ngf * 2),
-            nn.ReLU(True),
-
-            nn.ConvTranspose2d(ngf * 2, ngf, 4, 2, 1),
-            nn.BatchNorm2d(ngf),
-            nn.ReLU(True),
-
-            nn.ConvTranspose2d(ngf, nc, 3, 1, 1),
+            nn.Linear(latent_dim + num_classes, 256),
+            nn.BatchNorm1d(256),
+            nn.LeakyReLU(0.2),
+            nn.Linear(256, 512),
+            nn.BatchNorm1d(512),
+            nn.LeakyReLU(0.2),
+            nn.Linear(512, 1024),
+            nn.BatchNorm1d(1024),
+            nn.LeakyReLU(0.2),
+            nn.Linear(1024, 28 * 28),
             nn.Tanh()
         )
 
     def forward(self, z, labels):
-        embedded = self.label_embed(labels)
-        z = z + embedded
-        z = z.view(z.size(0), z.size(1), 1, 1)
-        return self.model(z)
+        label_input = self.label_embed(labels)
+        x = torch.cat([z, label_input], dim=1)
+        out = self.model(x)
+        return out.view(-1, 1, 28, 28)
 
 # === Load model ===
 @st.cache_resource
 def load_model():
     model = Generator().cpu()
-    model.load_state_dict(torch.load("dcgan_generator.pth", map_location="cpu"))
+    model.load_state_dict(torch.load("models/dcgan_generator.pth", map_location="cpu"))
     model.eval()
     return model
 
